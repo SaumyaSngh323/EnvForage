@@ -1,5 +1,7 @@
 # Security Policy
 
+**Deterministic logic > AI generation.** Because EnvForge generates scripts that run on user systems, we take security exceptionally seriously.
+
 ## Supported Versions
 
 EnvForge provides security updates for the following versions:
@@ -9,9 +11,9 @@ EnvForge provides security updates for the following versions:
 | 0.2.x   | :white_check_mark: | Currently in active development     |
 | 0.1.x   | :x:                | Alpha release, no longer maintained |
 
-## Reporting a Vulnerability
+## Responsible Disclosure
 
-We take the security of EnvForge seriously. If you discover a security vulnerability in the backend API, template engine, or CLI agent, please report it to us privately.
+If you discover a security vulnerability in the backend API, template engine, or CLI agent, please report it to us privately.
 
 **DO NOT open a public GitHub issue for security vulnerabilities.**
 
@@ -21,17 +23,26 @@ Instead, please email **rishabh0510@gmail.com** with:
 3. The affected versions or components (e.g., `TemplateRenderer`, `envforge-agent`).
 4. Any potential mitigations you suggest.
 
-### Response Timeline
+## Unsafe Command Policy
 
-- We will acknowledge receipt of your vulnerability report within **48 hours**.
-- We aim to provide an initial assessment and timeline for a fix within **5 days**.
-- Once the issue is resolved, we will publish a security advisory and notify users.
+EnvForge explicitly forbids the generation of dangerous shell commands. Every generated script passes through a strict `SafetyFilter`. We consider any bypass of this filter a critical security vulnerability. 
 
-### Scope
+**Prohibited commands include, but are not limited to:**
+- Recursive directory deletion (`rm -rf /`, `rm -rf $HOME`)
+- Filesystem formatting (`mkfs`, `format C:`)
+- Raw disk writing (`dd`)
+- System shutdown or reboot commands
+- Database drop commands (`DROP TABLE`, `DROP DATABASE`)
 
-The following areas are of particular interest for security research:
-- **Template Safety Filter**: Any bypass of the `SafetyFilter` that allows execution of forbidden shell patterns (e.g., `rm -rf /`, `curl | bash`).
-- **Path Traversal**: Any ability to read or write files outside intended directories via the API.
-- **Dependency Exploits**: Critical vulnerabilities in our direct dependencies (`FastAPI`, `Jinja2`, `SQLAlchemy`, etc.).
+For full details, read our [Script Safety Policy](./docs/SCRIPT_SAFETY.md).
 
-Thank you for helping keep EnvForge secure!
+## No Destructive Automation
+
+EnvForge is designed to *provision* and *repair*, not to blindly destroy. 
+- We do not generate scripts that automatically uninstall GPU drivers.
+- We do not generate scripts that forcefully delete Python environments without explicit user consent.
+- All repair scripts must be auditable plain-text files.
+
+## Sandboxing Philosophy
+
+We encourage users to test generated scripts inside Docker containers or isolated WSL environments whenever possible. We explicitly provide a `Dockerfile` output format for every profile to support this sandboxed approach.
