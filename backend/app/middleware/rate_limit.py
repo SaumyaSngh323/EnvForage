@@ -129,11 +129,18 @@ class RedisBackend(RateLimitBackend):
     Uses a sorted set per key: members are unique request IDs, scores are
     timestamps. This gives exact sliding-window counts without a Lua script.
 
-    Requires: pip install redis[asyncio]  (already a dep via pyproject.toml)
+    Requires: redis[asyncio] — listed in pyproject.toml dependencies.
     """
 
     def __init__(self, redis_url: str) -> None:
-        import redis.asyncio as aioredis
+        try:
+            import redis.asyncio as aioredis
+        except ImportError as exc:
+            raise RuntimeError(
+                "redis[asyncio] is not installed but REDIS_URL is set. "
+                "Add 'redis[asyncio]' to backend/pyproject.toml dependencies "
+                "and reinstall: pip install -e ."
+            ) from exc
         self._client = aioredis.from_url(redis_url, decode_responses=True)
 
     async def is_allowed(self, key: str, max_requests: int, window_seconds: int) -> tuple[bool, dict[str, Any]]:
@@ -184,6 +191,27 @@ class RedisBackend(RateLimitBackend):
         pass
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _mask_redis_url(url: str) -> str:
+    """
+    Mask the password in a Redis URL for safe logging.
+
+        redis://:password@host:port/db      →  redis://:***@host:port/db
+        redis://user:password@host:port/db  →  redis://user:***@host:port/db
+        redis://host:port/db                →  redis://host:port/db  (unchanged)
+    """
+    if "@" not in url:
+        return url
+    scheme_and_creds, hostpart = url.rsplit("@", 1)
+    creds = scheme_and_creds.split("//", 1)[-1]
+    if ":" in creds:
+        # Mask everything after the last colon in the credentials segment
+        prefix = scheme_and_creds.rsplit(":", 1)[0]
+        return f"{prefix}:***@{hostpart}"
+    return url
+
+
 # ── Backend factory ───────────────────────────────────────────────────────────
 
 def _make_backend() -> RateLimitBackend:
@@ -193,7 +221,7 @@ def _make_backend() -> RateLimitBackend:
     """
     settings = get_settings()
     if settings.redis_url:
-        logger.info("Rate limiter using Redis backend: %s", settings.redis_url)
+        logger.info("Rate limiter using Redis backend: %s", _mask_redis_url(settings.redis_url))
         return RedisBackend(settings.redis_url)
     logger.info("Rate limiter using in-memory backend (single-instance only)")
     return InMemoryBackend()
