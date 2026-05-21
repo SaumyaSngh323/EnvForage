@@ -2,10 +2,13 @@
 import logging
 
 from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 
 from app.api.deps import DB
+
+logger = logging.getLogger(__name__)
 from app.schemas.profile import (
     ProfileCreateSchema,
     ProfileDetailSchema,
@@ -72,14 +75,15 @@ async def create_profile(profile_in: ProfileCreateSchema, db: DB) -> ProfileDeta
     try:
         profile = await profile_service.create_profile(db, profile_in)
         return ProfileDetailSchema.model_validate(profile)
-    except Exception as e:
-        # Check for unique constraint violation on slug (typically IntegrityError but we catch Exception to be safe for this test)
-        if "unique constraint" in str(e).lower() or "duplicate key" in str(e).lower() or "unique" in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A profile with this slug already exists."
-            )
-        logger.error("Failed to create profile: %s", str(e))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A profile with this slug already exists."
+        )
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error("Database error while creating profile: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred while creating the profile."
