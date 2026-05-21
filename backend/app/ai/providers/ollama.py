@@ -75,7 +75,7 @@ class OllamaProvider(LLMProvider):
                 except json.JSONDecodeError as e:
                     raise LLMProviderError(
                         "ollama",
-                        f"LLM response was not valid JSON: {raw_text[:200]}... "
+                        f"LLM response was not valid JSON for {response_model.__name__}. "
                         f"Error: {str(e)}",
                     )from e
                 except ValueError as e:
@@ -94,9 +94,8 @@ class OllamaProvider(LLMProvider):
         except httpx.HTTPStatusError as e:
             raise LLMProviderError(
                 "ollama",
-                f"Ollama API returned status {e.response.status_code}: "
-                f"{e.response.text[:200]}",
-            )
+                f"Ollama API returned status {e.response.status_code}. ",
+            )from e
         except LLMProviderError:
          raise
         except Exception as e:
@@ -135,7 +134,7 @@ class OllamaProvider(LLMProvider):
                             if chunk_text:
                                 yield chunk_text
                         except json.JSONDecodeError:
-                            logger.warning(f"Skipped malformed Ollama stream line: {line}")
+                            logger.warning("Skipped malformed Ollama stream line from model=%s (length=%d)", self.model, len(line),)
                             continue
 
         except httpx.ConnectError:
