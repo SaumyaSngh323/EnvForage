@@ -32,6 +32,7 @@ class TemplateContext:
             },
             "python_version": self.resolved.python_version,
             "cuda_version": self.resolved.cuda_version,
+            "rocm_version": self.resolved.rocm_version,
             "target_os": self.resolved.target_os,
             "packages": [
                 {
