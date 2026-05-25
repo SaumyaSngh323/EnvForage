@@ -42,6 +42,8 @@ class TestRollbackSingleBackup:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
             os.makedirs("venv_backup_20260524")
+            with open("venv_backup_20260524/pyvenv.cfg", "w") as f:
+                f.write("version = 3.11")
 
             with patch("rich.prompt.Confirm.ask", return_value=False):
                 result = runner.invoke(cli, ["rollback"])
@@ -55,7 +57,11 @@ class TestRollbackMultipleBackups:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
             os.makedirs("venv_backup_20260524")
+            with open("venv_backup_20260524/pyvenv.cfg", "w") as f:
+                f.write("")
             os.makedirs("venv_backup_20260523")
+            with open("venv_backup_20260523/pyvenv.cfg", "w") as f:
+                f.write("")
 
             with patch("rich.prompt.IntPrompt.ask", return_value=1):
                 with patch("rich.prompt.Confirm.ask", return_value=False):
@@ -67,7 +73,11 @@ class TestRollbackMultipleBackups:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
             os.makedirs("venv_backup_z")
+            with open("venv_backup_z/pyvenv.cfg", "w") as f:
+                f.write("")
             os.makedirs("venv_backup_a")
+            with open("venv_backup_a/pyvenv.cfg", "w") as f:
+                f.write("")
 
             with patch("rich.prompt.IntPrompt.ask", return_value=1):
                 with patch("rich.prompt.Confirm.ask", return_value=False):
@@ -85,6 +95,8 @@ class TestRollbackFiltering:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
             os.makedirs("venv_backup_directory")
+            with open("venv_backup_directory/pyvenv.cfg", "w") as f:
+                f.write("")
             with open("venv_backup_file", "w") as f:
                 f.write("not a directory")
 
@@ -123,6 +135,8 @@ class TestRollbackRobustness:
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
             os.makedirs("_backup_2026")
+            with open("_backup_2026/pyvenv.cfg", "w") as f:
+                f.write("")
 
             result = runner.invoke(cli, ["rollback"])
 

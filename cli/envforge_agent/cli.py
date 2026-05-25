@@ -509,10 +509,14 @@ def rollback() -> None:
     import shutil
     import os
 
+    def _is_venv_backup(p: str) -> bool:
+        path = Path(p)
+        return path.is_dir() and (path / "pyvenv.cfg").exists()
+
     backups = sorted(
         p
         for p in (glob.glob("*_backup_*") + glob.glob(".*_backup_*"))
-        if Path(p).is_dir()
+        if _is_venv_backup(p)
     )
 
     if not backups:
