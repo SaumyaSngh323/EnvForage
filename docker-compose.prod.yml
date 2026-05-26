@@ -32,8 +32,6 @@ services:
     image: ollama/ollama
     container_name: envforge_ollama_prod
     restart: always
-    ports:
-      - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
 
