@@ -4,15 +4,8 @@ Template Engine — renders Jinja2 templates into setup scripts.
 All rendered output passes through SafetyFilter before being returned.
 This module never executes generated code; it only renders text.
 """
-
-
-
 from collections.abc import Sequence
-
-
-
 from functools import lru_cache
-
 from pathlib import Path
 
 from jinja2 import ChoiceLoader, FileSystemLoader, StrictUndefined, select_autoescape
@@ -54,12 +47,12 @@ PROFILE_VERIFY_TEMPLATES: dict[str, str] = {
 
 
 
-def _build_jinja_env() -> Environment:
-    return Environment(
-    loader=FileSystemLoader(str(TEMPLATES_DIR)),
-    undefined=StrictUndefined,
-    autoescape=False,
-)
+def _build_jinja_env() -> SandboxedEnvironment:
+    return SandboxedEnvironment(
+        loader=FileSystemLoader(str(TEMPLATES_DIR)),
+        undefined=StrictUndefined,
+        autoescape=False,
+    )
 
 @lru_cache(maxsize=16)
 def _get_jinja_env(custom_template_dir: Path | None) -> SandboxedEnvironment:
