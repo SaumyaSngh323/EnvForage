@@ -16,6 +16,8 @@ metadata:
   name: {{ include "envforge.fullname" . }}-postgres
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ include "envforge.fullname" . }}-postgres
