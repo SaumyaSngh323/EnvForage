@@ -15,13 +15,14 @@ export default function Footer() {
       <div
         className="container"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          display: "flex",
+          flexWrap: "wrap",
           gap: "3rem",
+          justifyContent: "space-between",
         }}
       >
         {/* Brand */}
-        <div style={{ gridColumn: "1 / -1", '@media (min-width: 768px)': { gridColumn: "span 2" } } as any}>
+        <div style={{ flex: "1 1 350px", maxWidth: "450px" }}>
           <h2
             style={{
               fontSize: "1.8rem",
@@ -39,7 +40,6 @@ export default function Footer() {
             style={{
               color: "var(--text-secondary)",
               lineHeight: "1.8",
-              maxWidth: "350px",
             }}
           >
             Build, diagnose and optimize AI/ML environments with confidence.
@@ -81,42 +81,45 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Product */}
-        <div>
-          <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
-            Product
-          </h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            <Link href="/profiles" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Profiles</Link>
-            <Link href="/diagnose" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Diagnose</Link>
-            <Link href="/troubleshoot" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Troubleshoot</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Script Generator</Link>
+        {/* Links Container */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4rem", flex: "1 1 400px", justifyContent: "flex-end" }}>
+          {/* Product */}
+          <div style={{ minWidth: "120px" }}>
+            <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
+              Product
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+              <Link href="/profiles" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Profiles</Link>
+              <Link href="/diagnose" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Diagnose</Link>
+              <Link href="/troubleshoot" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Troubleshoot</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Script Generator</Link>
+            </div>
           </div>
-        </div>
 
-        {/* Resources */}
-        <div>
-          <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
-            Resources
-          </h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Documentation</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Guides</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>API Reference</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>FAQ</Link>
+          {/* Resources */}
+          <div style={{ minWidth: "120px" }}>
+            <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
+              Resources
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Documentation</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Guides</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>API Reference</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>FAQ</Link>
+            </div>
           </div>
-        </div>
 
-        {/* Community */}
-        <div>
-          <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
-            Community
-          </h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Contribute</Link>
-            <Link href="https://github.com" target="_blank" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>GitHub</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Report Issues</Link>
-            <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Discussions</Link>
+          {/* Community */}
+          <div style={{ minWidth: "120px" }}>
+            <h4 style={{ marginBottom: "1.5rem", fontWeight: 600, color: "var(--text-primary)" }}>
+              Community
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Contribute</Link>
+              <Link href="https://github.com" target="_blank" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>GitHub</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Report Issues</Link>
+              <Link href="/coming-soon" style={{ color: "var(--text-secondary)", textDecoration: "none" }}>Discussions</Link>
+            </div>
           </div>
         </div>
       </div>
