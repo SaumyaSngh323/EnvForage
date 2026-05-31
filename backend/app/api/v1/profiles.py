@@ -14,6 +14,7 @@ from app.schemas.profile import (
     ProfileFilters,
     ProfileListResponse,
     ProfileSummarySchema,
+    ProfileUpdateSchema,
 )
 from app.services import profile_service
 
@@ -198,3 +199,26 @@ async def delete_profile(
             error_code="PROFILE_NOT_FOUND",
         )
     logger.info("Profile deleted: slug=%s", slug)
+    @router.patch(
+    "/profiles/{slug}",
+    response_model=ProfileDetailSchema,
+    summary="Partially update an environment profile",
+    tags=["Profiles"],
+)
+async def update_profile(
+    slug: str,
+    profile_update: ProfileUpdateSchema,
+    db: DB,
+    _auth: None = Depends(require_admin),
+) -> ProfileDetailSchema:
+    """
+    Partially update a profile by slug.
+    """
+    logger.info("Admin write: updating profile slug=%s", slug)
+    profile = await profile_service.update_profile(db, slug, profile_update)
+    if not profile:
+        raise EntityNotFoundError(
+            resource=f"Profile '{slug}'",
+            error_code="PROFILE_NOT_FOUND",
+        )
+    return ProfileDetailSchema.model_validate(profile)
