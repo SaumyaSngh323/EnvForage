@@ -15,6 +15,7 @@ import sys
 import platform
 from pathlib import Path
 import asyncio
+import urllib.parse
 
 import click
 import asyncio
@@ -127,7 +128,7 @@ def cli(ctx: click.Context, no_color: bool) -> None:
 )
 def diagnose(output: str | None, send: bool, api_url: str, quiet: bool, sarif: bool, timeout: int, output_format: str = "json") -> None:
     if api_url and "#" in api_url:
-        api_url = api_url.split("#", 1)[0].strip()
+        api_url = urllib.parse.urldefrag(api_url).url.strip()
     asyncio.run(_diagnose(output, send, api_url, quiet, sarif, timeout, output_format))
 
 
