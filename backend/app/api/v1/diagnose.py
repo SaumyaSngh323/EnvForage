@@ -45,6 +45,9 @@ router = APIRouter()
 # accumulates all pages before running the resolver.
 _PROFILE_PAGE_SIZE = 100
 
+# Limit concurrency to 5 threads globally across all requests to avoid memory spikes under heavy load
+_RESOLVER_SEMAPHORE = asyncio.Semaphore(5)
+
 
 @router.post(
     "/diagnose",
@@ -133,24 +136,21 @@ async def diagnose(
     compatible_profiles: list[str] = []
     recommendations: list[str] = []
 
-    # Limit concurrency to 5 threads per request to avoid memory spikes under heavy load
-    sem = asyncio.Semaphore(5)
-
     # CompatibilityResolver.resolve() is a CPU-bound synchronous function.
     # Calling it directly inside an async handler blocks the event loop for
     # the duration of every resolve call. Under concurrent load, all other
     # requests queue behind the resolver. Each call is offloaded to a thread
     # via asyncio.to_thread so the event loop stays free.
     async def _resolve(profile: EnvironmentProfile) -> ResolvedEnvironment:
-        async with sem:
-            packages = [
-                PackageConstraint(
-                    name=package.package_name,
-                    version_spec=package.version_spec,
-                    cuda_variant=package.cuda_variant,
-                )
-                for package in sorted(profile.packages, key=lambda item: item.install_order)
-            ]
+        packages = [
+            PackageConstraint(
+                name=package.package_name,
+                version_spec=package.version_spec,
+                cuda_variant=package.cuda_variant,
+            )
+            for package in sorted(profile.packages, key=lambda item: item.install_order)
+        ]
+        async with _RESOLVER_SEMAPHORE:
             return await asyncio.to_thread(
                 resolver.resolve,
                 packages=packages,
