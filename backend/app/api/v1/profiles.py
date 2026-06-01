@@ -204,6 +204,12 @@ async def delete_profile(
     response_model=ProfileDetailSchema,
     summary="Partially update an environment profile",
     tags=["Profiles"],
+    responses={
+    200: {"description": "Profile updated successfully."},
+    401: {"description": "Missing or invalid admin API key."},
+    404: {"description": "Profile not found."},
+    503: {"description": "Admin API key not configured on this server."},
+},
 )
 async def update_profile(
     slug: str,
