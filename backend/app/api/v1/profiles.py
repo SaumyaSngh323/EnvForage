@@ -198,3 +198,40 @@ async def delete_profile(
             error_code="PROFILE_NOT_FOUND",
         )
     logger.info("Profile deleted: slug=%s", slug)
+    @router.patch(
+    "/{slug}",
+    status_code=status.HTTP_200_OK,
+    summary="Update environment profile",
+    description="Soft update an environment profile using its slug.",
+    tags=["Profiles"],
+    responses={
+        200: {"description": "Profile updated successfully."},
+        401: {"description": "Missing or invalid admin API key."},
+        404: {"description": "Profile not found."},
+        503: {"description": "Admin API key not configured on this server."},
+    },
+)
+async def update_profile(
+    db: DB,
+    slug: str = Path(
+        ...,
+        description="Unique slug of the environment profile to update.",
+        examples=["pytorch-cuda"],
+    ),
+    profile_update: ProfileUpdateSchema = Body(
+        ..., description="Partial profile data to update."
+    ),
+    _auth: None = Depends(require_admin),
+) -> ProfileSchema:
+    """
+    Soft update a profile by slug.
+    """
+    updated = await profile_service.update_profile(db, slug, profile_update)
+    if not updated:
+        raise EntityNotFoundError(
+            resource="Profile ({slug})",
+            error_code="PROFILE_NOT_FOUND",
+        )
+
+    logger.info(f"Admin write: updating profile slug={slug}")
+    return updated
