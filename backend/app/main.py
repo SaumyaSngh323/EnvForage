@@ -1,7 +1,9 @@
 """
 FastAPI application factory and lifespan management.
 """
+
 import asyncio
+import sys
 import typing
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -22,16 +24,15 @@ from app.api.v1 import (
     troubleshoot,
     verify,
 )
+from app.api.v1.admin.matrix import router as admin_matrix_router
 from app.cache import get_redis_client
 from app.config import get_settings
 from app.core.handlers import register_exception_handlers
 from app.database import AsyncSessionLocal
 from app.middleware.metrics import setup_metrics
 from app.middleware.payload_size import PayloadSizeLimitMiddleware
-from app.api.v1.admin.matrix import router as admin_matrix_router
 from app.services.cleanup_service import run_cleanup
 from app.services.sync_service import matrix_sync_loop
-import sys
 
 
 @asynccontextmanager

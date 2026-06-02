@@ -5,24 +5,27 @@ from logging.config import fileConfig
 
 from dotenv import load_dotenv
 from sqlalchemy import pool
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.compiler import compiles
-
-@compiles(ARRAY, "sqlite")
-def compile_array_sqlite(element, compiler, **kw):
-    return "TEXT"
-
-@compiles(JSONB, "sqlite")
-def compile_jsonb_sqlite(element, compiler, **kw):
-    return "JSON"
 
 import app.models  # noqa: F401 — ensure all models are registered
 from alembic import context
 from app.database import Base
 
 load_dotenv()
+
+
+@compiles(ARRAY, "sqlite")
+def compile_array_sqlite(element, compiler, **kw):
+    return "TEXT"
+
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(element, compiler, **kw):
+    return "JSON"
+
 
 # Import all models so Alembic can detect schema
 
