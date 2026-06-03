@@ -8,9 +8,14 @@ no script passes without this validation.
 
 import asyncio
 import concurrent.futures
+import json
 import logging
+import os
 import re
+import subprocess
+from typing import Any
 
+import bashlex
 from pydantic import BaseModel
 
 from app.ai.providers.base import LLMProvider
@@ -79,3 +84,33 @@ _COMPILED: list[tuple[re.Pattern[str], str]] = [
     (re.compile(pattern, re.IGNORECASE | re.DOTALL), desc)
     for pattern, desc in FORBIDDEN_PATTERNS
 ]
+
+
+class AISafetyVerdict(BaseModel):
+    is_safe: bool
+    reason: str
+
+
+class SafetyViolationError(Exception):
+    """Raised when rendered template output contains a forbidden pattern."""
+
+    def __init__(self, pattern: str, description: str, context: str = "") -> None:
+        self.pattern = pattern
+        self.description = description
+        self.context = context
+        super().__init__(
+            f"Safety violation detected: {description} (pattern: {pattern!r})"
+        )
+
+
+def _validate_bash_ast(content: str, template_name: str = "") -> None:
+    """Parse and validate shell scripts using bashlex AST parsing."""
+    try:
+        nodes = bashlex.parse(content)
+    except Exception as e:
+        logger.warning(
+            f"Bash AST parsing skipped for {template_name} due to parser error/limitation: {str(e)}"
+        )
+        return
+
+    violations = []
