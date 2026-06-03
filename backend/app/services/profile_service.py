@@ -13,7 +13,12 @@ from sqlalchemy.orm import selectinload
 
 from app.cache import get_redis_client
 from app.models.profile import EnvironmentProfile, ProfilePackage
-from app.schemas.profile import ProfileCreateSchema, ProfileFilters, ProfileSummarySchema, ProfileDetailSchema
+from app.schemas.profile import (
+    ProfileCreateSchema,
+    ProfileDetailSchema,
+    ProfileFilters,
+    ProfileSummarySchema,
+)
 
 
 async def get_all_active_profiles(
@@ -29,7 +34,7 @@ async def get_all_active_profiles(
     )
     if include_packages:
         query = query.options(selectinload(EnvironmentProfile.packages))
-        
+
     result = await db.execute(query)
     return list(result.scalars().all())
 
@@ -60,7 +65,7 @@ async def list_profiles(
         .where(EnvironmentProfile.status == "ACTIVE")
         .order_by(EnvironmentProfile.name)
     )
-    
+
     if include_packages:
         query = query.options(selectinload(EnvironmentProfile.packages))
 
@@ -102,12 +107,12 @@ async def list_profiles(
 
     result = await db.execute(query)
     profiles = list(result.scalars().all())
-    
+
     if redis and cache_key:
         profiles_data = [ProfileSummarySchema.model_validate(p).model_dump(mode="json") for p in profiles]
         cache_data = {"profiles": profiles_data, "total": total}
         await redis.setex(cache_key, 300, json.dumps(cache_data))
-        
+
     return profiles, total
 
 
@@ -130,11 +135,11 @@ async def get_profile_by_slug(
         .options(selectinload(EnvironmentProfile.packages))
     )
     profile = result.scalar_one_or_none()
-    
+
     if redis and profile:
         profile_data = ProfileDetailSchema.model_validate(profile).model_dump(mode="json")
         await redis.setex(cache_key, 300, json.dumps(profile_data))
-        
+
     return profile
 
 
@@ -188,7 +193,7 @@ async def create_profile(
     profile = await get_profile_by_id(db, db_profile.id)
     if not profile:
         raise ValueError("Failed to retrieve created profile")
-        
+
     await _invalidate_profile_caches(profile.slug)
     return profile
 
@@ -210,6 +215,6 @@ async def delete_profile(
     except Exception:
         await db.rollback()
         raise
-        
+
     await _invalidate_profile_caches(slug)
     return True
