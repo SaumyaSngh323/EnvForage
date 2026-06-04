@@ -405,13 +405,16 @@ async def test_signup_password_over_72_bytes_returns_422(db_session: AsyncSessio
 async def test_signup_password_exactly_72_bytes_accepted(db_session: AsyncSession, monkeypatch):
     """A password of exactly 72 bytes is accepted (boundary condition)."""
     client = _make_client(db_session, monkeypatch)
+    # Create a 72-byte password meeting strength requirements
+    pwd_72 = "Exact72BytePass123!Exact72BytePass123!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    assert len(pwd_72.encode("utf-8")) == 72, f"Password is {len(pwd_72.encode('utf-8'))} bytes, expected 72"
     resp = client.post(
         "/api/v1/signup",
         json={
             "fname": "Exact",
             "lname": "Bytes",
             "email": "exact72@example.com",
-            "password": "a" * 72,
+            "password": pwd_72,
         },
     )
     assert resp.status_code == 200
@@ -441,7 +444,7 @@ async def test_signup_integrity_error_returns_400(db_session: AsyncSession, monk
             "fname": "Race",
             "lname": "Condition",
             "email": "race@example.com",
-            "password": "validpass1",
+            "password": "ValidPass123!",  # meets strength requirements
         },
     )
     assert resp.status_code == 400
