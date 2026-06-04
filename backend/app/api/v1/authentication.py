@@ -1,9 +1,8 @@
 """Authentication endpoints — /signup, /signin, /me.
 
-Rate-limiting:  /signup and /signin are protected by dedicated per-IP
-rate limiters to prevent brute-force and credential-stuffing attacks:
-  - Signup: 5 attempts per 15 minutes per IP
-  - Signin: 10 attempts per 15 minutes per IP
+Rate-limiting:  /signup and /signin are protected by ``auth_rate_limit``
+(configurable via ``settings.rate_limit_auth_rpm``, default 20 rpm) to
+prevent brute-force and credential-stuffing attacks.
 
 JWT validation: the /me endpoint demonstrates the ``CurrentUser`` dependency
 that other routes should use to require an authenticated user.
@@ -19,20 +18,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import DB, CurrentUser
 from app.config import get_settings
-from app.middleware.rate_limit import RateLimiter
+from app.middleware.rate_limit import auth_rate_limit
 from app.services.user_repository import UserRepository
 
 router = APIRouter()
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Rate limiters for authentication endpoints.
-# Auth endpoints are high-value brute-force targets so they get tighter
-# windows than the general-API limiter (60 rpm).
-# Signup: 5 attempts per 15 minutes per IP — prevents mass account creation.
-auth_signup_limiter = RateLimiter(max_requests=5, window_seconds=900)
-# Signin: 10 attempts per 15 minutes per IP — allows a few retries for
-# legitimate users while blocking dictionary attacks.
-auth_signin_limiter = RateLimiter(max_requests=10, window_seconds=900)
 
 
 # ── Request schemas ────────────────────────────────────────────────────────────
@@ -122,12 +112,13 @@ class MeResponse(BaseModel):
 async def signup(
     data: RegData,
     db: DB,
-    _rate_limit: None = Depends(auth_signup_limiter),
+    _rate_limit: None = Depends(auth_rate_limit),
 ) -> MessageResponse:
     """Create a new user account.
 
-    Rate-limited to 5 attempts per 15 minutes per IP to prevent mass
-    account creation and credential-stuffing attacks.
+    Rate-limited via ``auth_rate_limit`` (default 20 rpm, configurable
+    via ``settings.rate_limit_auth_rpm``) to prevent mass account creation
+    and credential-stuffing attacks.
     """
     repo = UserRepository(db)
     if await repo.user_exists(data.email):
@@ -159,12 +150,13 @@ async def signup(
 async def signin(
     data: LoginData,
     db: DB,
-    _rate_limit: None = Depends(auth_signin_limiter),
+    _rate_limit: None = Depends(auth_rate_limit),
 ) -> TokenResponse:
     """Authenticate with email + password and receive a signed JWT.
 
-    Rate-limited to 10 attempts per 15 minutes per IP to prevent
-    brute-force password attacks. The returned token must be sent as
+    Rate-limited via ``auth_rate_limit`` (default 20 rpm, configurable
+    via ``settings.rate_limit_auth_rpm``) to prevent brute-force password
+    attacks. The returned token must be sent as
     ``Authorization: Bearer <token>`` on subsequent protected requests.
     """
     repo = UserRepository(db)
