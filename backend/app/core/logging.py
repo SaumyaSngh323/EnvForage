@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Any
 
 import structlog
 
@@ -13,7 +14,7 @@ def setup_logging() -> None:
     """
     settings = get_settings()
 
-    shared_processors = [
+    shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,

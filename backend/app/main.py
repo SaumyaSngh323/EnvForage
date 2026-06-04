@@ -4,6 +4,7 @@ FastAPI application factory and lifespan management.
 
 import asyncio
 import logging
+import structlog
 import sys
 import typing
 from collections.abc import AsyncGenerator
@@ -41,7 +42,7 @@ from app.services.sync_service import matrix_sync_loop
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application startup and shutdown."""
     settings = get_settings()
-    logger = logging.getLogger(__name__)
+    logger = structlog.get_logger(__name__)
 
     logger.info(
         "EnvForge API starting",
