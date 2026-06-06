@@ -1,6 +1,7 @@
 import pytest
-import asyncio
+
 from app.core.events import dispatcher
+
 
 @pytest.mark.asyncio
 async def test_event_dispatcher():
