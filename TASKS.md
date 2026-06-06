@@ -36,10 +36,10 @@
 
 ## Milestone 3: Documentation Hub & Markdown Engine
 - [x] **Step 25: MDX Engine Configuration** (Target: `frontend/next.config.ts`)
-- [ ] **Step 26: Technical Documentation Layout** (Target: `frontend/src/app/docs/layout.tsx`)
-- [ ] **Step 27: Getting Started Markdown Guide** (Target: `frontend/src/app/docs/getting-started/page.mdx`)
-- [ ] **Step 28: Architecture Markdown Guide** (Target: `frontend/src/app/docs/architecture/page.mdx`)
-- [ ] **Step 29: API Schema Markdown Guide** (Target: `frontend/src/app/docs/api/page.mdx`)
+- [x] **Step 26: Technical Documentation Layout** (Target: `frontend/src/app/docs/layout.tsx`)
+- [x] **Step 27: Getting Started Markdown Guide** (Target: `frontend/src/app/docs/getting-started/page.mdx`)
+- [x] **Step 28: Architecture Markdown Guide** (Target: `frontend/src/app/docs/architecture/page.mdx`)
+- [x] **Step 29: API Schema Markdown Guide** (Target: `frontend/src/app/docs/api/page.mdx`)
 - [ ] **Step 30: MDX Code Syntax Highlighting** (Target: `frontend/src/components/mdx/CodeBlock.tsx`)
 - [ ] **Step 31: Dynamic Anchor Links** (Target: `frontend/src/components/mdx/Heading.tsx`)
 - [ ] **Step 32: Global Search Modal UI** (Target: `frontend/src/components/SearchModal.tsx`)
