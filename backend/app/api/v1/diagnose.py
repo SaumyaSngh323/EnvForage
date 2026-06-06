@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 
@@ -34,8 +34,7 @@ from app.schemas.diagnostic import (
     TaskResponse,
     DiagnoseTaskStatus,
 )
-from app.schemas.profile import ProfileFilters
-from app.services.profile_service import list_profiles
+from app.services.profile_service import get_all_active_profiles
 from app.templates.safety import SafetyViolationError, validate_rendered_output
 from app.worker import run_diagnose_task
 from celery.result import AsyncResult
@@ -48,6 +47,7 @@ router = APIRouter()
 # Kept intentionally small so each page fetch is cheap; the while-loop below
 # accumulates all pages before running the resolver.
 _PROFILE_PAGE_SIZE = 100
+
 
 @router.post(
     "/diagnose",
@@ -95,7 +95,7 @@ async def diagnose(
         if report.active_python
         else None,
         driver_version=report.gpus[0].driver_version if report.gpus else None,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
     db.add(db_report)
     await db.commit()
@@ -225,7 +225,7 @@ def _log_explain_audit(
             provider=provider,
             tokens_used=tokens_used,
             latency_ms=latency_ms,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
         db.add(log)
     except Exception as exc:

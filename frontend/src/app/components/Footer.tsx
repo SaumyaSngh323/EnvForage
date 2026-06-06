@@ -10,15 +10,7 @@ export default function Footer() {
 				padding: "5rem 0 2rem",
 			}}
 		>
-			<div
-				className="container"
-				style={{
-					display: "flex",
-					flexWrap: "wrap",
-					gap: "3rem",
-					justifyContent: "space-between",
-				}}
-			>
+			<div className="container footer-grid">
 				{/* Brand */}
 				<div style={{ flex: "1 1 350px", maxWidth: "450px" }}>
 					<h2
@@ -80,15 +72,7 @@ export default function Footer() {
 				</div>
 
 				{/* Links Container */}
-				<div
-					style={{
-						display: "flex",
-						flexWrap: "wrap",
-						gap: "4rem",
-						flex: "1 1 400px",
-						justifyContent: "flex-end",
-					}}
-				>
+				<div className="footer-links">
 					{/* Product */}
 					<div style={{ minWidth: "120px" }}>
 						<h4
@@ -222,16 +206,17 @@ export default function Footer() {
 							}}
 						>
 							<Link
-								href="/coming-soon"
+								href="https://discord.gg/N2GKNRzDV"
+								target="_blank"
 								style={{
 									color: "var(--text-secondary)",
 									textDecoration: "none",
 								}}
 							>
-								Contribute
+								Join Discord
 							</Link>
 							<Link
-								href="https://github.com"
+								href="https://github.com/rishabh0510rishabh/EnvForage"
 								target="_blank"
 								style={{
 									color: "var(--text-secondary)",
@@ -250,7 +235,8 @@ export default function Footer() {
 								Report Issues
 							</Link>
 							<Link
-								href="/coming-soon"
+								href="https://github.com/rishabh0510rishabh/EnvForage/discussions"
+								target="_blank"
 								style={{
 									color: "var(--text-secondary)",
 									textDecoration: "none",
