@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Any
+from typing import Any
+
+from fastapi import APIRouter
+
 from app.api.deps import DB
-from app.models.webhook import Webhook
 
 router = APIRouter()
 
-@router.get("/webhooks", response_model=List[Any])
+@router.get("/webhooks", response_model=list[Any])
 async def list_webhooks(db: DB):
     # Retrieve all webhooks for the authorized user/context
     # Placeholder for actual implementation

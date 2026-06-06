@@ -1,11 +1,13 @@
+from typing import Any
+
 from fastapi import APIRouter
-from typing import List, Any
+
 from app.plugins.loader import load_plugins
 
 router = APIRouter()
 _active_plugins = {}
 
-@router.get("/plugins", response_model=List[Any])
+@router.get("/plugins", response_model=list[Any])
 async def list_available_plugins():
     # In a real app we'd load them once or refresh cache
     plugins = load_plugins("app.plugins")
