@@ -21,7 +21,6 @@ from app.schemas.profile import (
     ProfileSummarySchema,
     ProfileUpdateSchema,
 )
-from backend.app.core import logging
 
 
 async def get_all_active_profiles(

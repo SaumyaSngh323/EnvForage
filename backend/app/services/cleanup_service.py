@@ -4,8 +4,8 @@ import logging
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from prometheus_client import Counter, Gauge
 
+from prometheus_client import Counter, Gauge
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 

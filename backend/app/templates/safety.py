@@ -465,4 +465,5 @@ def validate_rendered_output(
                 f"AI Safety check failed due to provider error — degrading to regex-only: {str(e)}"
             )
 
+
     return content
