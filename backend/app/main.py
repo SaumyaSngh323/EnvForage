@@ -32,6 +32,7 @@ from app.cache import get_redis_client
 from app.config import get_settings
 from app.core.handlers import register_exception_handlers
 from app.core.logging import setup_logging
+from app.core.stream_tracker import StreamTracker
 from app.database import AsyncSessionLocal
 from app.middleware.metrics import setup_metrics
 from app.middleware.payload_size import PayloadSizeLimitMiddleware
@@ -52,6 +53,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         version=settings.app_version,
         environment=settings.environment,
     )
+    # Track in-flight SSE streams so shutdown can drain them gracefully.
+    app.state.stream_tracker = StreamTracker()
+
     # ── Background cleanup scheduler ─────────────────────────
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -70,6 +74,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         sync_task = asyncio.create_task(matrix_sync_loop(AsyncSessionLocal))
 
     yield
+
+    # Let active SSE streams finish before tearing resources down
+    # (e.g. on SIGTERM during a rolling update) — see issue #192.
+    drained = await app.state.stream_tracker.drain(
+        settings.graceful_shutdown_timeout_seconds
+    )
+    if not drained:
+        logger_instance.warning(
+            "Graceful shutdown timed out while waiting for active streams"
+        )
 
     if sync_task:
         sync_task.cancel()
@@ -98,6 +112,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     setup_logging()
+
+    # Register centralized exception handlers from app.core.handlers.
+    # This keeps API error formatting and logging behavior consistent
+    # across the application through a single implementation.
     register_exception_handlers(app)
     # ── CORS ─────────────────────────────────────────────────
 
@@ -227,36 +245,3 @@ class GracefulShutdownManager:
 global_shutdown_manager = GracefulShutdownManager()
 
 
-# --- Global Exception Handlers ---
-from fastapi import Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-import logging
-
-logger = logging.getLogger("GlobalErrorHandler")
-
-# Need to attach this after app creation
-def setup_exception_handlers(app):
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        logger.warning(f"Validation error on {request.url.path}: {exc.errors()}")
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": "Unprocessable Entity",
-                "details": exc.errors(),
-                "path": request.url.path
-            }
-        )
-
-    @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
-        logger.error(f"Unhandled server error on {request.url.path}: {exc}", exc_info=True)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "error": "Internal Server Error",
-                "message": "An unexpected error occurred while processing your request.",
-                "path": request.url.path
-            }
-        )

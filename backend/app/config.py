@@ -12,7 +12,7 @@ import tempfile
 import urllib.parse
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from dotenv import load_dotenv
 from pydantic import field_validator, model_validator
@@ -38,6 +38,24 @@ class Settings(BaseSettings):
     app_name: str = "EnvForage"
     app_version: str = "1.0.0"
     custom_template_dir: Path | None = None
+
+    # ── Graceful shutdown ─────────────────────────────────────
+    # Max seconds to wait for in-flight SSE streams to finish before the
+    # process exits (e.g. on SIGTERM during a Kubernetes rolling update).
+    graceful_shutdown_timeout_seconds: float = 30.0
+
+    @field_validator("graceful_shutdown_timeout_seconds")
+    @classmethod
+    def validate_graceful_shutdown_timeout_seconds(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError(
+                "graceful_shutdown_timeout_seconds must be greater than 0"
+            )
+        if v > 300:
+            raise ValueError(
+                "graceful_shutdown_timeout_seconds must be less than or equal to 300"
+            )
+        return v
 
     # ── Database ──────────────────────────────────────────────
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/envforge"
@@ -189,11 +207,20 @@ def validate_database_command_timeout_seconds(cls, v: float) -> float:
         # Validate localhost CORS origin in production
         if self.environment == "production":
             for origin in self.allowed_origins_list:
-                normalized = origin.strip().lower().rstrip("/")
-                if normalized == "http://localhost:3000":
+                parsed_origin = urllib.parse.urlparse(origin)
+                hostname = parsed_origin.hostname
+                if hostname in ("localhost", "127.0.0.1", "[::1]", "::1"):
                     raise ValueError(
-                        "Localhost CORS origin 'http://localhost:3000' is not allowed in production"
+                        f"Localhost CORS origin '{origin}' is not allowed in production"
                     )
+
+            # Block localhost database URLs in production
+            parsed_db = urllib.parse.urlparse(self.database_url)
+            hostname = parsed_db.hostname
+            if hostname in ("localhost", "127.0.0.1", "[::1]", "::1"):
+                raise ValueError(
+                    "Localhost database URL is not allowed in production environment"
+                )
 
         # Validate custom_template_dir
         if self.custom_template_dir:
