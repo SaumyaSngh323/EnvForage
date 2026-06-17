@@ -62,13 +62,13 @@ async def generate_scripts(
     # Load profile
     # Fetch ORM object directly — NOT from cache. script_service.generate_scripts()
     # needs a real SQLAlchemy model (not a cached dict).
-    result = await db.execute(
+    db_result = await db.execute(
         select(EnvironmentProfile)
         .where(EnvironmentProfile.slug == request.profile_id)
         .where(EnvironmentProfile.deleted_at.is_(None))
         .options(selectinload(EnvironmentProfile.packages))
     )
-    profile = result.scalar_one_or_none()
+    profile = db_result.scalar_one_or_none()
     if profile is None:
         raise HTTPException(
             status_code=404,
