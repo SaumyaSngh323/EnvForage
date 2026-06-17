@@ -24,9 +24,9 @@ class AdvancedBaseMixin:
     """
 
     @declared_attr
-    def __tablename__(cls) -> Any:
+    def __tablename__(self) -> Any:
         # Auto-generate table name based on class name (e.g. UserProfile -> user_profiles)
-        name = cls.__name__  # type: ignore[attr-defined]
+        name = self.__class__.__name__
         import re
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower() + 's'
