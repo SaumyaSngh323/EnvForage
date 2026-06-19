@@ -154,6 +154,24 @@ class TestFixHappyPath:
         called_url = mock_httpx.call_args[0][0]
         assert "myserver:9000" in called_url
 
+    @pytest.mark.asyncio
+    @patch("sys.stdin.isatty", return_value=True)
+    @patch("click.prompt", return_value=1)
+    async def test_fix_missing_profile_interactive(self, mock_prompt, mock_isatty, valid_report, mock_httpx):
+        """If --profile is missing and stdin is a tty, it prompts user to select a profile."""
+        from envforage.cli import _fix
+
+        await _fix(
+            report=str(valid_report),
+            profile=None,
+            api_url="http://localhost:8000",
+            dry_run=True,
+            quiet=True,
+        )
+
+        mock_prompt.assert_called_once()
+        assert mock_httpx.called
+
 
 class TestFixAPIErrors:
     """Tests for API error handling in envforage fix."""

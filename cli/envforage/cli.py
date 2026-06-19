@@ -30,7 +30,7 @@ from envforage.report import ReportBuilder
 from envforage.schemas import DiagnosticReport
 from envforage.detectors import detect_wsl_gpu_passthrough
 
-from envforage.utils import _map_os_to_target, _extract_python_version, check_for_updates
+from envforage.utils import _map_os_to_target, _extract_python_version, check_for_updates, run_upgrade
 from envforage.audit import audit_command
 from envforage.config import load_config
 
@@ -44,6 +44,46 @@ def _reinit_consoles(no_color: bool) -> None:
     if no_color:
         console = Console(no_color=True, highlight=False)
         err_console = Console(stderr=True, no_color=True, highlight=False)
+
+
+def _handle_api_status_error(e: httpx.HTTPStatusError) -> None:
+    """Pretty print HTTPStatusError response payloads from the backend."""
+    try:
+        err_data = e.response.json()
+        detail = err_data.get("detail", {})
+        error_info = detail.get("error", {})
+        if error_info:
+            msg = error_info.get("message", "")
+            code = error_info.get("code", "")
+            details = error_info.get("details", {})
+
+            group_items = [
+                f"[bold red]Error Code:[/] {code}",
+                f"[bold red]Description:[/] {msg}",
+            ]
+            if details:
+                if "component" in details:
+                    group_items.append(f"[bold red]Component:[/] {details['component']}")
+                if "constraint" in details:
+                    group_items.append(f"[bold red]Constraint:[/] {details['constraint']}")
+                if "detected" in details:
+                    group_items.append(f"[bold red]Detected:[/] {details['detected']}")
+                if "suggestion" in details:
+                    group_items.append(f"[bold green]Suggestion:[/] {details['suggestion']}")
+                if "docs_url" in details:
+                    group_items.append(f"[bold]Documentation:[/] [link={details['docs_url']}]{details['docs_url']}[/link]")
+
+            panel = Panel(
+                "\n".join(group_items),
+                title=f"[bold red]Compatibility Engine Conflict ({e.response.status_code})[/]",
+                border_style="red"
+            )
+            err_console.print(panel)
+        else:
+            err_console.print(f"[ERROR] API returned {e.response.status_code}: {e.response.text}")
+    except Exception:
+        err_console.print(f"[ERROR] API returned {e.response.status_code}: {e.response.text}")
+    sys.exit(1)
 
 
 def check_macos_support():
@@ -66,6 +106,13 @@ def _version_callback(ctx: click.Context, _param: click.Parameter, value: bool) 
     ctx.exit()
 
 
+def _upgrade_callback(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+    run_upgrade(interactive=True)
+    ctx.exit()
+
+
 @click.group()
 @click.option(
     "--version",
@@ -74,6 +121,14 @@ def _version_callback(ctx: click.Context, _param: click.Parameter, value: bool) 
     expose_value=False,
     callback=_version_callback,
     help="Show the version and exit.",
+)
+@click.option(
+    "--upgrade",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_upgrade_callback,
+    help="Upgrade EnvForage CLI to the latest version.",
 )
 @click.option(
     "--no-color",
@@ -88,7 +143,8 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     ctx.ensure_object(dict)
     _reinit_consoles(no_color)
     check_macos_support()
-    check_for_updates()
+    if ctx.invoked_subcommand != "upgrade" and "--upgrade" not in sys.argv:
+        check_for_updates()
 
 
 # ── envforage diagnose ──────────────────────────────────────────────────────────
@@ -407,9 +463,7 @@ async def _send_report(report: DiagnosticReport, api_url: str, quiet: bool) -> N
                 sys.exit(1)
 
         except httpx.HTTPStatusError as e:
-            err_console.print(f"[ERROR] API returned {e.response.status_code}")
-            err_console.print(e.response.text)
-            sys.exit(1)
+            _handle_api_status_error(e)
 
 
 def _print_diagnose_response(result: dict) -> None:
@@ -651,7 +705,8 @@ def _print_verification_summary(data: dict, is_gpu_profile: bool) -> None:
 @click.option(
     "--profile",
     "-p",
-    required=True,
+    required=False,
+    default=None,
     help="Profile slug to generate a repair script for.",
 )
 @click.option(
@@ -672,27 +727,76 @@ def _print_verification_summary(data: dict, is_gpu_profile: bool) -> None:
     default=False,
     help="Suppress all logging output and print only the generated script contents.",
 )
-def fix(report: str, profile: str, api_url: str | None, dry_run: bool, quiet: bool) -> None:
+def fix(report: str, profile: str | None, api_url: str | None, dry_run: bool, quiet: bool) -> None:
     config = load_config()
     final_api_url = api_url or config.api_url
     asyncio.run(_fix(report, profile, final_api_url, dry_run, quiet))
 
 
-async def _fix(report: str, profile: str, api_url: str, dry_run: bool, quiet: bool) -> None:
+def _get_recommended_profiles(report: DiagnosticReport) -> list[str]:
+    """Helper to get recommended profile slugs based on hardware scan."""
+    has_gpu = len(report.gpus) > 0
+    vrams = [gpu.vram_gb for gpu in report.gpus if gpu.vram_gb is not None]
+    max_vram = max(vrams) if vrams else None
+
+    os_name = report.os.name.lower()
+    cpu_brand = report.cpu.brand.lower()
+    is_macos = "macos" in os_name or "darwin" in os_name or "mac os" in os_name
+    is_arm_apple = (
+        "apple" in cpu_brand
+        or "m1" in cpu_brand
+        or "m2" in cpu_brand
+        or "m3" in cpu_brand
+        or "m4" in cpu_brand
+    )
+    is_apple_silicon = is_macos and is_arm_apple
+
+    if is_apple_silicon:
+        return ["pytorch-mps", "cpu-only"]
+    if not has_gpu:
+        return ["cpu-only", "sklearn"]
+    if max_vram is not None and max_vram < 4:
+        return ["yolov8-nano", "sklearn"]
+    if max_vram is not None and max_vram <= 8:
+        return ["pytorch-cuda", "yolov8"]
+    return ["tf-gpu", "pytorch-cuda", "yolov8"]
+
+
+async def _fix(report: str, profile: str | None, api_url: str, dry_run: bool, quiet: bool) -> None:
     """
     Generate a repair script based on a saved diagnostic report.
 
     Sends the report to the API and requests a setup script for the target profile.
     """
-    if not quiet:
-        console.print(f"[bold cyan]Generating repair script[/] for profile: {profile}")
-
     try:
         raw = Path(report).read_text(encoding="utf-8")
         parsed = DiagnosticReport.model_validate_json(raw)
     except Exception as e:
         err_console.print(f"Failed to parse report file: {e}")
         sys.exit(1)
+
+    if not profile:
+        recommended = _get_recommended_profiles(parsed)
+        if not recommended:
+            recommended = ["cpu-only"]
+
+        if sys.stdin.isatty():
+            console.print("[bold cyan]Please select a profile to generate the repair script for:[/]")
+            for i, p in enumerate(recommended, 1):
+                console.print(f"  {i}. [bold]{p}[/]")
+            try:
+                choice = click.prompt("Select profile index", type=int, default=1, err=True)
+                if 1 <= choice <= len(recommended):
+                    profile = recommended[choice - 1]
+                else:
+                    profile = recommended[0]
+            except Exception:
+                profile = recommended[0]
+        else:
+            profile = recommended[0]
+
+    if not quiet:
+        console.print(f"[bold cyan]Generating repair script[/] for profile: {profile}")
 
     # Detect OS and Python from the loaded report to build a generate request
     target_os = _map_os_to_target(parsed)
@@ -747,8 +851,13 @@ async def _fix(report: str, profile: str, api_url: str, dry_run: bool, quiet: bo
         err_console.print(f"Cannot connect to {url}. Is the API running?")
         sys.exit(1)
     except httpx.HTTPStatusError as e:
-        err_console.print(f"API error {e.response.status_code}: {e.response.text}")
-        sys.exit(1)
+        _handle_api_status_error(e)
+
+
+@cli.command("upgrade")
+def upgrade() -> None:
+    """Upgrade EnvForage CLI to the latest version."""
+    run_upgrade(interactive=True)
 
 
 cli.add_command(audit_command)

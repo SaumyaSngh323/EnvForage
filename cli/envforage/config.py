@@ -9,6 +9,7 @@ console = Console()
 class CliSettings(BaseSettings):
     api_url: str = Field(default="http://localhost:8000", description="EnvForage backend API URL")
     timeout: int = Field(default=30, description="HTTP request timeout in seconds")
+    auto_update: bool = Field(default=False, description="Enable automatic prompts/checks for updates")
 
     model_config = SettingsConfigDict(
         env_file=".env",
