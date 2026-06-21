@@ -208,7 +208,7 @@ export const api = {
 		reasons: string[];
 		comments?: string;
 		email?: string;
-	}): Promise<any> => {
+	}): Promise<unknown> => {
 		const response = await fetch(`${API_BASE_URL}/uninstall/feedback`, {
 			method: "POST",
 			headers: {
@@ -235,7 +235,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
-        const config = error.config as any;
+        const config = error.config as typeof error.config & { retryCount?: number };
         
         if (!config || !config.retryCount) {
             config.retryCount = 0;

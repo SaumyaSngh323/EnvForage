@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Code, Copy, Check, Server, Globe, Key, AlertCircle, Play } from "lucide-react";
+import { Code, Copy, Check, Play } from "lucide-react";
 
 export default function ApiReferencePage() {
 	const [activeTab, setActiveTab] = useState<"curl" | "python" | "javascript">("curl");
@@ -64,7 +64,7 @@ print(f"Packages: {data['packages']}")`,
 
 	// Generate dynamic simulated response based on inputs
 	const getSimulatedResponse = () => {
-		let pythonVersion = "3.10";
+		const pythonVersion = "3.10";
 		let cudaVersion = "12.1";
 		let packages: string[] = [];
 
@@ -222,7 +222,7 @@ print(f"Packages: {data['packages']}")`,
 						</label>
 						<select
 							value={simOS}
-							onChange={(e) => setSimOS(e.target.value as any)}
+							onChange={(e) => setSimOS(e.target.value as "linux" | "windows" | "macos")}
 							style={{
 								width: "100%",
 								padding: "0.6rem 0.75rem",
@@ -246,7 +246,7 @@ print(f"Packages: {data['packages']}")`,
 						</label>
 						<select
 							value={simFramework}
-							onChange={(e) => setSimFramework(e.target.value as any)}
+							onChange={(e) => setSimFramework(e.target.value as "pytorch" | "tensorflow" | "jax")}
 							style={{
 								width: "100%",
 								padding: "0.6rem 0.75rem",
@@ -440,7 +440,7 @@ print(f"Packages: {data['packages']}")`,
 							<td style={{ padding: "1rem", fontFamily: "var(--font-mono)", color: "var(--brand-secondary)" }}>driver_version</td>
 							<td style={{ padding: "1rem" }}>string</td>
 							<td style={{ padding: "1rem", color: "#ef4444", fontWeight: 600 }}>Yes</td>
-							<td style={{ padding: "1rem" }}>Local graphic driver version identifier. E.g. "535.104", "525.60"</td>
+							<td style={{ padding: "1rem" }}>Local graphic driver version identifier. E.g. &quot;535.104&quot;, &quot;525.60&quot;</td>
 						</tr>
 						<tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
 							<td style={{ padding: "1rem", fontFamily: "var(--font-mono)", color: "var(--brand-secondary)" }}>framework</td>

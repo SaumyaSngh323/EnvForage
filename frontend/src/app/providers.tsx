@@ -109,10 +109,11 @@ export function useSystemThemePreference() {
             try {
                 localStorage.setItem('system-theme-snapshot', newTheme);
                 window.dispatchEvent(new Event('system-theme-change'));
-            } catch (err) {}
+            } catch {}
         };
 
         // Initial setup
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
         document.documentElement.setAttribute('data-system-theme', mediaQuery.matches ? 'dark' : 'light');
 

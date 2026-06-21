@@ -213,7 +213,7 @@ export default function TroubleshootPage() {
 					targetCuda = parsed?.cuda?.version || targetCuda;
 					targetPython = parsed?.active_python?.version || targetPython;
 				}
-			} catch (e) {
+			} catch {
 				// silently fallback to defaults
 			}
 

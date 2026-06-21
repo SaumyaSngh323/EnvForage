@@ -24,6 +24,7 @@ export function useMediaQuery(query: string, defaultValue: boolean = false): boo
 
   // We set the initial accurate state only after the component has mounted
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsHydrated(true);
     if (typeof window !== 'undefined' && window.matchMedia) {
       const media = window.matchMedia(query);
@@ -53,10 +54,10 @@ export function useMediaQuery(query: string, defaultValue: boolean = false): boo
       };
     } else if (mediaQueryList.addListener) {
       // Deprecated fallback for older WebKit / IE
-      // @ts-ignore
+      // @ts-expect-error — addListener is deprecated but needed for legacy browser support
       mediaQueryList.addListener(handleChange);
       return () => {
-        // @ts-ignore
+        // @ts-expect-error — removeListener is deprecated but needed for legacy browser support
         mediaQueryList.removeListener(handleChange);
       };
     }

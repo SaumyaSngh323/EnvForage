@@ -1,6 +1,6 @@
 
 // --- Tabs Navigation Engine ---
-import React, { useState, ReactNode, useRef, useEffect } from 'react';
+import React, { useState, ReactNode, useRef } from 'react';
 
 export interface TabData {
   id: string;

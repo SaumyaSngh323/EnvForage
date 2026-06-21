@@ -789,7 +789,7 @@ export class GenerateErrorBoundary extends Component<{ children: React.ReactNode
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ error: error.message, stack: errorInfo.componentStack })
             }).catch(() => {});
-        } catch (e) {}
+        } catch {}
     }
 
     render() {

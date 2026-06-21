@@ -28,7 +28,7 @@ export interface AppState {
     
     // Profile State
     activeProfileSlug: string;
-    customParams: Record<string, any>;
+    customParams: Record<string, unknown>;
 
     // Actions
     toggleSidebar: () => void;
@@ -36,7 +36,7 @@ export interface AppState {
     setDiagnosticData: (data: DiagnosticData) => void;
     setAnalysisState: (isAnalyzing: boolean, result?: TroubleshootResult | null) => void;
     setActiveProfile: (slug: string) => void;
-    updateCustomParams: (key: string, value: any) => void;
+    updateCustomParams: (key: string, value: unknown) => void;
     resetState: () => void;
 }
 
@@ -55,7 +55,7 @@ const initialState = {
 export const useAppStore = create<AppState>()(
     devtools(
         persist(
-            (set, get) => ({
+            (set) => ({
                 ...initialState,
 
                 // --- UI Actions ---

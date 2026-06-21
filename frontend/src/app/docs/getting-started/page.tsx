@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Terminal, Copy, Check, Info, Cpu, Settings, Play, ShieldAlert } from "lucide-react";
+import { Terminal, Copy, Check, Info } from "lucide-react";
 
 export default function QuickStartPage() {
 	const [activeOS, setActiveOS] = useState<"linux" | "windows" | "macos">("linux");

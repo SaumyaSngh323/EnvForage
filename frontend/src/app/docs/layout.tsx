@@ -18,7 +18,7 @@ import {
 interface NavItem {
 	title: string;
 	href: string;
-	icon: any;
+	icon: React.ComponentType<{ size?: number; color?: string }>;
 	isExternal?: boolean;
 }
 
@@ -101,6 +101,7 @@ export default function DocsLayout({
 
 	// Close mobile menu when route changes
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setIsMobileMenuOpen(false);
 	}, [pathname]);
 

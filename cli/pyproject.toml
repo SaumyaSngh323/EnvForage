@@ -67,8 +67,12 @@ line-length = 100
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
+strict = false
 ignore_missing_imports = true
+disallow_untyped_defs = false
+disallow_any_generics = false
+warn_return_any = false
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

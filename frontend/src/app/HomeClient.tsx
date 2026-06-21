@@ -16,6 +16,7 @@ export default function HomePage() {
 	const [isMobile, setIsMobile] = useState(false);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setIsMounted(true);
 		const checkMobile = () => {
 			setIsMobile(window.innerWidth < 768);

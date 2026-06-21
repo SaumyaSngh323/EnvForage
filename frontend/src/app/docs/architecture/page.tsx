@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, ShieldCheck, Database, HardDrive, Cpu, Terminal, GitMerge, FileText } from "lucide-react";
+import { Layers, ShieldCheck, Database, Cpu, Terminal, GitMerge, FileText } from "lucide-react";
 
 export default function ArchitecturePage() {
 	const flowSteps = [
@@ -81,6 +81,7 @@ export default function ArchitecturePage() {
 					backgroundColor: "rgba(255, 255, 255, 0.01)",
 				}}
 			>
+				{/* eslint-disable-next-line @next/next/no-img-element */}
 				<img
 					src="/architecture_diagram.png"
 					alt="EnvForage System Architecture Diagram"

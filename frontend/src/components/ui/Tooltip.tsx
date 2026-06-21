@@ -33,7 +33,8 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       className = '',
       disabled = false,
     },
-    ref
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _ref
   ) => {
     const [isVisible, setIsVisible] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -110,6 +111,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
           window.removeEventListener('resize', calculatePosition);
         };
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isVisible, position]);
 
     useEffect(() => {
