@@ -80,4 +80,4 @@ async def test_all_output_formats_have_registered_templates():
         assert template_file.is_file(), (
             f"TEMPLATE_MAP['{fmt}'] points to '{TEMPLATE_MAP[fmt]}', which does "
             f"not exist at {template_file}"
-        )
+        )
