@@ -39,19 +39,19 @@ FORBIDDEN_PATTERNS: list[tuple[str, str]] = [
         "Wget-pipe-to-shell (untrusted exec)",
     ),
     (
-        r"wget\s+[^;\|&]+?(-O\s+\S+).*(?:&&|;|\||\|\||\n)\s*(?:ba)?sh\s+\1",
-        "Wget download-and-execute pattern (sequential/chained)",
+    r"wget\s+.*?(-O\s+(\S+))[\s\S]*?(?:&&|;|\||\|\||\n)\s*(?:ba)?sh\s+\2",
+    "Wget download-and-execute pattern (sequential/chained)",
     ),
     (
-        r"wget\s+[^;\|&]+?(-O\s+(\S+)).*(?:&&|;|\||\|\||\n)\s*(?:ba)?sh\s+\2",
-        "Wget download-and-execute pattern (explicit target)",
-    ),
+    r"wget\s+.*?(-O\s+(\S+))[\s\S]*?(?:&&|;|\||\|\||\n)\s*(?:ba)?sh\s+\2",
+    "Wget download-and-execute pattern (explicit target)",
+     ),
     (
-        r"wget\s+\S+.*\n\s*sh\s+",
+        r"wget\s+\S+[\s\S]*?\n\s*(?:ba)?sh\s+"
         "Wget download-and-execute pattern (newline separated)",
     ),
     (
-        r"wget\s+\S+.*;\s*sh\s+",
+        r"wget\s+\S+[\s\S]*?\n\s*(?:ba)?sh\s+"
         "Wget download-and-execute pattern (semicolon separated)",
     ),
     (
