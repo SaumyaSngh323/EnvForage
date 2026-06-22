@@ -47,11 +47,11 @@ FORBIDDEN_PATTERNS: list[tuple[str, str]] = [
     "Wget download-and-execute pattern (explicit target)",
      ),
     (
-        r"wget\s+\S+[\s\S]*?\n\s*(?:ba)?sh\s+"
+        r"wget\s+\S+[^|&]*?;\s*(?:ba)?sh\s+",
         "Wget download-and-execute pattern (newline separated)",
     ),
     (
-        r"wget\s+\S+[\s\S]*?\n\s*(?:ba)?sh\s+"
+        r"wget\s+\S+[^|&]*?;\s*(?:ba)?sh\s+",
         "Wget download-and-execute pattern (semicolon separated)",
     ),
     (
