@@ -4,8 +4,6 @@ import json
 import uuid
 from types import SimpleNamespace
 
-import pytest
-
 from app.compatibility.models import ResolvedEnvironment, ResolvedPackage
 from app.schemas.script import GenerationRequest
 from app.services import script_service
@@ -38,7 +36,7 @@ class FakeRedis:
 
 
 class FakeRenderer:
-    def render_all(self, output_formats, ctx):
+    async def render_all(self, output_formats, ctx):
         package = ctx.resolved.packages[0]
         return [
             SimpleNamespace(
@@ -92,13 +90,12 @@ async def _fake_redis_client(redis: FakeRedis) -> FakeRedis:
     return redis
 
 
-@pytest.mark.asyncio
 async def test_generate_scripts_returns_cached_resolved_environment(monkeypatch):
     cached = _resolved(version="2.1.0")
     redis = FakeRedis(json.dumps(cached.to_dict()))
 
     class ResolverShouldNotRun:
-        def resolve(self, **kwargs):
+        async def resolve(self, **kwargs):
             raise AssertionError("resolver should not run on cache hit")
 
     monkeypatch.setattr(
@@ -115,7 +112,6 @@ async def test_generate_scripts_returns_cached_resolved_environment(monkeypatch)
     assert redis.set_calls == []
 
 
-@pytest.mark.asyncio
 async def test_generate_scripts_caches_resolved_environment_on_miss(monkeypatch):
     redis = FakeRedis()
 
@@ -123,7 +119,7 @@ async def test_generate_scripts_caches_resolved_environment_on_miss(monkeypatch)
         def __init__(self) -> None:
             self.calls = 0
 
-        def resolve(self, **kwargs):
+        async def resolve(self, **kwargs):
             self.calls += 1
             return _resolved(version="2.2.0")
 

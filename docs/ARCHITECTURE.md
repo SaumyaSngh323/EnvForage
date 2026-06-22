@@ -1,8 +1,8 @@
-# EnvForge — System Architecture
+# EnvForage — System Architecture
 
-> **Version**: 1.0.0
-> **Status**: Phase 1 & 3 Implemented
-> **Last Updated**: 2026-05-14
+> **Version**: 2.0.0
+> **Status**: Stable v2.0.0
+> **Last Updated**: 2026-06-18
 
 > **Implementation Coverage**: Backend API, Compatibility Engine, Template Engine, Database layer, and Frontend Web App (Phase 3) are fully implemented. CLI Agent (Phase 2) pending.
 
@@ -10,7 +10,32 @@
 
 ## 1. Overview
 
-EnvForge is a production-grade ML/AI environment provisioning platform. It provides:
+# Architecture System Design Updates
+
+This document expands upon the core architectural concepts introduced during the massive implementation blueprint, detailing how advanced systems scale and interact.
+
+## 1. Event Bus & Webhook Dispatcher
+**The Problem:** Triggering external URLs synchronously during a diagnostic completion blocks the FastAPI event loop, causing massive latency for the end-user.
+**The Solution:** We utilize FastAPI's native `BackgroundTasks` (or a Celery worker pool for heavy enterprise scale) as an asynchronous Event Bus.
+- When `diagnose.completed` occurs, the payload is serialized and handed to the background queue.
+- The dispatcher generates an **HMAC SHA-256 signature** using the user's registered webhook secret.
+- Delivery utilizes `requests` with a strict 3-second timeout and exponential backoff logic (up to 3 retries) for failed HTTP deliveries.
+
+## 2. Distributed Rate Limiter (Redis)
+**The Problem:** In-memory dictionary rate limiters fail when the backend is horizontally scaled across multiple Kubernetes pods.
+**The Solution:** We implement a Token-Bucket algorithm backed by a shared Redis instance.
+- Middleware intercepts every request and maps it to either a client IP or an authenticated JWT Token.
+- **Tiered Rules:** Expensive routes (like `/api/v1/troubleshoot` hitting AI Providers) are capped strictly (e.g., 5 requests/minute). Static profile retrievals are capped loosely (e.g., 100 requests/minute).
+- Redis handles the atomic decrement operations (`DECR`) guaranteeing race-condition-free throttling.
+
+## 3. CLI Offline Caching & Synchronization
+**The Problem:** Developers often work in air-gapped environments or on servers lacking outbound internet access.
+**The Solution:** The CLI Agent (`envforage`) initializes a local SQLite database at `~/.envforage/cache.db`.
+- **Offline Flag:** When run with `--offline`, the HTTP POST to the backend is bypassed entirely.
+- Telemetry data is timestamped, hashed, and stored locally.
+- Users can run `envforage restore` to read the cached database and execute automated rollback scripts to undo a previously generated setup.
+
+EnvForage is a production-grade ML/AI environment provisioning platform. It provides:
 - Intelligent setup script generation for Windows, WSL, Linux, and CUDA environments
 - Compatibility-aware ML framework installation guidance
 - Local diagnostic agents for environment introspection
@@ -141,7 +166,7 @@ graph TD
 - Full integration: Phase 4
 
 ### 3.6 CLI Diagnostic Agent
-- Standalone Python package (`pip install envforge-agent`)
+- Standalone Python package (`pip install envforage`)
 - Collects system info: OS, GPU, VRAM, CUDA, Python, drivers
 - Outputs structured JSON — can pipe to API or view locally
 - No network requirement; works fully offline
@@ -151,7 +176,7 @@ graph TD
 ```mermaid
 flowchart TD
 
-    A[envforge diagnose] --> B[Generate DiagnosticReport]
+    A[envforage diagnose] --> B[Generate DiagnosticReport]
     B --> C[Send Report to Backend API]
     C --> D[Compatibility Analysis]
     D --> E[AI Troubleshooting Layer]
@@ -207,6 +232,9 @@ Internet → Render (Web Service)
 FastAPI → PostgreSQL (Supabase IPv4 Pooler)
 FastAPI → Redis (session cache, rate limiting — Phase 2)
 FastAPI → OpenRouter / LLM Provider (Phase 4)
+
+FastAPI → Kubernetes via Helm chart (`helm/envforage/`)
+         └── Deployment + Service + Ingress + ConfigMap + Redis
 ```
 
 ---
@@ -230,7 +258,6 @@ FastAPI → OpenRouter / LLM Provider (Phase 4)
 ## 7. Related Documents
 
 - [`FEATURES.md`](./FEATURES.md) — Feature specifications with implementation status
-- [`ROADMAP.md`](./ROADMAP.md) — Development phases
 - [`API_DESIGN.md`](./API_DESIGN.md) — Endpoint specifications
 - [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) — PostgreSQL schema
 - [`COMPATIBILITY_ENGINE.md`](./COMPATIBILITY_ENGINE.md) — Version logic
@@ -252,3 +279,40 @@ FastAPI → OpenRouter / LLM Provider (Phase 4)
 | [ADR-007](./decisions/ADR-007-dynamic-ui-compatibility-fields.md) | Dynamic UI for Script Wizard | Accepted |
 | [ADR-008](./decisions/ADR-008-safety-filter-negative-lookahead.md) | Safety Filter negative lookahead | Accepted |
 | [ADR-009](./decisions/ADR-009-openrouter-primary-gateway.md) | OpenRouter as primary LLM gateway | Accepted |
+# Architecture System Design Updates
+
+This document expands upon the core architectural concepts introduced during the massive implementation blueprint, detailing how advanced systems scale and interact.
+
+## 1. Event Bus & Webhook Dispatcher
+**The Problem:** Triggering external URLs synchronously during a diagnostic completion blocks the FastAPI event loop, causing massive latency for the end-user.
+**The Solution:** We utilize FastAPI's native `BackgroundTasks` (or a Celery worker pool for heavy enterprise scale) as an asynchronous Event Bus.
+- When `diagnose.completed` occurs, the payload is serialized and handed to the background queue.
+- The dispatcher generates an **HMAC SHA-256 signature** using the user's registered webhook secret.
+- Delivery utilizes `requests` with a strict 3-second timeout and exponential backoff logic (up to 3 retries) for failed HTTP deliveries.
+
+## 2. Distributed Rate Limiter (Redis)
+**The Problem:** In-memory dictionary rate limiters fail when the backend is horizontally scaled across multiple Kubernetes pods.
+**The Solution:** We implement a Token-Bucket algorithm backed by a shared Redis instance.
+- Middleware intercepts every request and maps it to either a client IP or an authenticated JWT Token.
+- **Tiered Rules:** Expensive routes (like `/api/v1/troubleshoot` hitting AI Providers) are capped strictly (e.g., 5 requests/minute). Static profile retrievals are capped loosely (e.g., 100 requests/minute).
+- Redis handles the atomic decrement operations (`DECR`) guaranteeing race-condition-free throttling.
+
+## 3. Persistent SQLite Cache (Backend)
+**The Problem:** The old caching layer relied on an unpredictable in-memory fallback cache that caused synchronization issues across workers.
+**The Solution:** We replaced the legacy caching layer with a robust, robust SQLite-backed cache.
+- Telemetry, telemetry syncs, and heavy computational lookups are now stored locally in a persistent SQLite database (`cache.db`).
+- This guarantees stable state across worker reloads and provides lightning-fast local reads without an external dependency.
+
+## 3. CLI Offline Caching & Synchronization
+**The Problem:** Developers often work in air-gapped environments or on servers lacking outbound internet access.
+**The Solution:** The CLI Agent (`envforage`) initializes a local SQLite database at `~/.envforage/cache.db`.
+- **Offline Flag:** When run with `--offline`, the HTTP POST to the backend is bypassed entirely.
+- Telemetry data is timestamped, hashed, and stored locally.
+- Users can run `envforage restore` to read the cached database and execute automated rollback scripts to undo a previously generated setup.
+
+## 4. Asynchronous AI Streaming Responses
+**The Problem:** Waiting 15-20 seconds for an LLM to generate a complex dependency resolution script results in terrible UX.
+**The Solution:** The backend standardizes all AI interactions through a unified `BaseProvider` interface utilizing `AsyncGenerator` yields.
+- FastAPI's `StreamingResponse` wraps these yields, pushing Server-Sent Events (SSE) `text/event-stream` chunks directly to the client over an open HTTP connection.
+- The frontend utilizes a custom `useAIStream` React Hook to append the chunks to a state variable, which is parsed in real-time by the MDX component tree.
+- Context summarization middleware ensures that bloated local log files are truncated *before* interacting with token-limited AI models.

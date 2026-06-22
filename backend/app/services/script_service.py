@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -170,7 +170,7 @@ async def generate_scripts(
     cache_key = _resolver_cache_key(profile, request, constraints)
     resolved = await _get_cached_resolved_environment(cache_key)
     if resolved is None:
-        resolved = _resolver.resolve(
+        resolved = await _resolver.resolve(
             packages=constraints,
             python_version=request.python_version,
             cuda_version=request.cuda_version,
@@ -179,6 +179,7 @@ async def generate_scripts(
             os_support=list(profile.os_support),
             cuda_required=profile.cuda_required,
             overrides=request.overrides,
+            db=db,
         )
         await _cache_resolved_environment(cache_key, resolved)
 
@@ -191,7 +192,7 @@ async def generate_scripts(
         use_uv=request.use_uv,
         use_micromamba=request.use_micromamba,
     )
-    render_results = _renderer.render_all(request.output_formats, ctx)
+    render_results = await _renderer.render_all(request.output_formats, ctx)
 
     # Step 4: Persist job + scripts
     job = ScriptGenerationJob(
@@ -203,7 +204,7 @@ async def generate_scripts(
         overrides=request.overrides or {},
         status="completed",
         resolved_env=resolved.to_dict(),
-        completed_at=datetime.utcnow(),
+        completed_at=datetime.now(UTC),
     )
     db.add(job)
 

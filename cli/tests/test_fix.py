@@ -1,9 +1,10 @@
 """
-Integration tests for the `envforge fix` CLI command.
+Integration tests for the `envforage fix` CLI command.
 
 Tests mock the backend API using unittest.mock.patch("httpx.AsyncClient")
 to intercept the async HTTP requests sent by the CLI agent.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from click.testing import CliRunner
 
-from envforge_agent.cli import cli
+from envforage.cli import cli
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -36,72 +37,79 @@ def mock_api_success() -> MagicMock:
     mock_resp.json.return_value = {
         "job_id": "test-job-123",
         "resolved_packages": ["torch==2.3.0", "torchvision==0.18.0"],
-        "scripts": [
-            {
-                "filename": "setup.sh",
-                "content": "#!/bin/bash\npip install torch==2.3.0"
-            }
-        ],
-        "download_url": "/api/v1/scripts/download/test-job-123"
+        "scripts": [{"filename": "setup.sh", "content": "#!/bin/bash\npip install torch==2.3.0"}],
+        "download_url": "/api/v1/scripts/download/test-job-123",
     }
     return mock_resp
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_httpx(mock_api_success):
-    """Globally mock httpx.AsyncClient for all tests in this file."""
     mock_client = MagicMock()
-    mock_client.post = AsyncMock(return_value=mock_api_success)
-    
-    mock_async_client_class = MagicMock()
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client
-    
-    with patch("httpx.AsyncClient", mock_async_client_class):
-        yield mock_client
+    mock_post = AsyncMock(return_value=mock_api_success)
+    mock_client.post = mock_post
+
+    mock_class = MagicMock()
+    mock_class.return_value.__aenter__.return_value = mock_client
+
+    with patch("httpx.AsyncClient", mock_class):
+        yield mock_post
 
 
 class TestFixHappyPath:
-    """Happy path tests for envforge fix."""
+    """Happy path tests for envforage fix."""
 
-    def test_fix_displays_script_content(self, valid_report):
+    def test_fix_displays_script_content(self, valid_report, mock_httpx):
         """Standard run should print script content in a rich panel."""
         runner = CliRunner()
-        with patch("httpx.AsyncClient.post", return_value=mock_api_success):
-            result = runner.invoke(cli, [
+        result = runner.invoke(
+            cli,
+            [
                 "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-            ])
+                "--report",
+                str(valid_report),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
         assert result.exit_code == 0
         assert "setup.sh" in result.output
         assert "test-job-123" in result.output
 
-    def test_fix_dry_run_lists_filenames_only(self, valid_report):
+    def test_fix_dry_run_lists_filenames_only(self, valid_report, mock_httpx):
         """--dry-run should list script filenames without printing content."""
         runner = CliRunner()
-        with patch("httpx.AsyncClient.post", return_value=mock_api_success):
-            result = runner.invoke(cli, [
+        result = runner.invoke(
+            cli,
+            [
                 "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
+                "--report",
+                str(valid_report),
+                "--profile",
+                "pytorch-cuda",
                 "--dry-run",
-            ])
+            ],
+        )
 
         assert result.exit_code == 0
         assert "setup.sh" in result.output
         # Full script content should NOT appear in dry-run
         assert "pip install torch" not in result.output
 
-    def test_fix_shows_resolved_packages(self, valid_report):
+    def test_fix_shows_resolved_packages(self, valid_report, mock_httpx):
         """Output should include resolved packages from API response."""
         runner = CliRunner()
-        with patch("httpx.AsyncClient.post", return_value=mock_api_success):
-            result = runner.invoke(cli, [
+        result = runner.invoke(
+            cli,
+            [
                 "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-            ])
+                "--report",
+                str(valid_report),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
         assert result.exit_code == 0
         assert "torch==2.3.0" in result.output
@@ -109,15 +117,20 @@ class TestFixHappyPath:
     def test_fix_sends_correct_payload(self, valid_report, mock_httpx):
         """API request payload must contain profile_id, target_os, python_version."""
         runner = CliRunner()
-        runner.invoke(cli, [
-            "fix",
-            "--report", str(valid_report),
-            "--profile", "pytorch-cuda",
-        ])
+        runner.invoke(
+            cli,
+            [
+                "fix",
+                "--report",
+                str(valid_report),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
-        assert mock_httpx.post.called
-        call_kwargs = mock_httpx.post.call_args[1]
-        payload = call_kwargs["json"]
+        assert mock_httpx.called
+        call_kwargs = mock_httpx.call_args
+        payload = call_kwargs[1]["json"] if "json" in call_kwargs[1] else call_kwargs[0][1]
         assert payload["profile_id"] == "pytorch-cuda"
         assert "target_os" in payload
         assert "python_version" in payload
@@ -125,37 +138,64 @@ class TestFixHappyPath:
     def test_fix_uses_custom_api_url(self, valid_report, mock_httpx):
         """--api-url flag should override the default localhost URL."""
         runner = CliRunner()
-        with patch("httpx.AsyncClient.post", return_value=mock_api_success) as mock_post:
-            runner.invoke(cli, [
+        runner.invoke(
+            cli,
+            [
                 "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-                "--api-url", "http://myserver:9000",
-            ])
+                "--report",
+                str(valid_report),
+                "--profile",
+                "pytorch-cuda",
+                "--api-url",
+                "http://myserver:9000",
+            ],
+        )
 
-        called_url = mock_httpx.post.call_args[0][0]
+        called_url = mock_httpx.call_args[0][0]
         assert "myserver:9000" in called_url
+
+    @pytest.mark.asyncio
+    @patch("sys.stdin.isatty", return_value=True)
+    @patch("click.prompt", return_value=1)
+    async def test_fix_missing_profile_interactive(self, mock_prompt, mock_isatty, valid_report, mock_httpx):
+        """If --profile is missing and stdin is a tty, it prompts user to select a profile."""
+        from envforage.cli import _fix
+
+        await _fix(
+            report=str(valid_report),
+            profile=None,
+            api_url="http://localhost:8000",
+            dry_run=True,
+            quiet=True,
+        )
+
+        mock_prompt.assert_called_once()
+        assert mock_httpx.called
 
 
 class TestFixAPIErrors:
-    """Tests for API error handling in envforge fix."""
+    """Tests for API error handling in envforage fix."""
 
     def test_fix_exits_on_connect_error(self, valid_report):
         """ConnectError should print a helpful message and exit 1."""
         import httpx
-        runner = CliRunner()
-        
-        mock_client = MagicMock()
-        mock_client.post.side_effect = httpx.ConnectError("refused")
-        mock_async_client_class = MagicMock()
-        mock_async_client_class.return_value.__aenter__.return_value = mock_client
 
-        with patch("httpx.AsyncClient", mock_async_client_class):
-            result = runner.invoke(cli, [
-                "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-            ])
+        runner = CliRunner()
+        mock_post = AsyncMock(side_effect=httpx.ConnectError("refused"))
+        mock_class = MagicMock()
+        mock_class.return_value.__aenter__.return_value.post = mock_post
+
+        with patch("httpx.AsyncClient", mock_class):
+            result = runner.invoke(
+                cli,
+                [
+                    "fix",
+                    "--report",
+                    str(valid_report),
+                    "--profile",
+                    "pytorch-cuda",
+                ],
+            )
 
         assert result.exit_code == 1
         assert "connect" in result.output.lower()
@@ -163,6 +203,7 @@ class TestFixAPIErrors:
     def test_fix_exits_on_http_error(self, valid_report):
         """4xx/5xx API responses should exit with code 1."""
         import httpx
+
         runner = CliRunner()
 
         mock_resp = MagicMock()
@@ -172,23 +213,28 @@ class TestFixAPIErrors:
             "400", request=MagicMock(), response=mock_resp
         )
 
-        mock_client = MagicMock()
-        mock_client.post.return_value = mock_resp
-        mock_async_client_class = MagicMock()
-        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+        mock_post = AsyncMock(return_value=mock_resp)
+        mock_class = MagicMock()
+        mock_class.return_value.__aenter__.return_value.post = mock_post
 
-        with patch("httpx.AsyncClient", mock_async_client_class):
-            result = runner.invoke(cli, [
-                "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-            ])
+        with patch("httpx.AsyncClient", mock_class):
+            result = runner.invoke(
+                cli,
+                [
+                    "fix",
+                    "--report",
+                    str(valid_report),
+                    "--profile",
+                    "pytorch-cuda",
+                ],
+            )
 
         assert result.exit_code == 1
 
     def test_fix_exits_on_500_error(self, valid_report):
         """500 server error should exit with code 1."""
         import httpx
+
         runner = CliRunner()
 
         mock_resp = MagicMock()
@@ -198,17 +244,21 @@ class TestFixAPIErrors:
             "500", request=MagicMock(), response=mock_resp
         )
 
-        mock_client = MagicMock()
-        mock_client.post.return_value = mock_resp
-        mock_async_client_class = MagicMock()
-        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+        mock_post = AsyncMock(return_value=mock_resp)
+        mock_class = MagicMock()
+        mock_class.return_value.__aenter__.return_value.post = mock_post
 
-        with patch("httpx.AsyncClient", mock_async_client_class):
-            result = runner.invoke(cli, [
-                "fix",
-                "--report", str(valid_report),
-                "--profile", "pytorch-cuda",
-            ])
+        with patch("httpx.AsyncClient", mock_class):
+            result = runner.invoke(
+                cli,
+                [
+                    "fix",
+                    "--report",
+                    str(valid_report),
+                    "--profile",
+                    "pytorch-cuda",
+                ],
+            )
 
         assert result.exit_code == 1
 
@@ -222,38 +272,50 @@ class TestFixMalformedReport:
         bad_report.write_text("{ this is not valid json }", encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "fix",
-            "--report", str(bad_report),
-            "--profile", "pytorch-cuda",
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "fix",
+                "--report",
+                str(bad_report),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
         assert result.exit_code == 1
 
     def test_fix_exits_on_missing_required_fields(self, tmp_path):
         """JSON missing required DiagnosticReport fields should exit 1."""
         bad_report = tmp_path / "incomplete.json"
-        bad_report.write_text(
-            json.dumps({"agent_version": "1.0.0"}),
-            encoding="utf-8"
-        )
+        bad_report.write_text(json.dumps({"agent_version": "2.0.0"}), encoding="utf-8")
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "fix",
-            "--report", str(bad_report),
-            "--profile", "pytorch-cuda",
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "fix",
+                "--report",
+                str(bad_report),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
         assert result.exit_code == 1
 
     def test_fix_exits_on_nonexistent_report(self, tmp_path):
         """Nonexistent report path should be caught by Click and exit non-zero."""
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "fix",
-            "--report", str(tmp_path / "nonexistent.json"),
-            "--profile", "pytorch-cuda",
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "fix",
+                "--report",
+                str(tmp_path / "nonexistent.json"),
+                "--profile",
+                "pytorch-cuda",
+            ],
+        )
 
         assert result.exit_code != 0

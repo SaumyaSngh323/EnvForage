@@ -1,7 +1,7 @@
 """Data models for the Template Engine."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from app.compatibility.models import ResolvedEnvironment
@@ -17,8 +17,8 @@ class TemplateContext:
     profile_id: str
     profile_name: str
     resolved: ResolvedEnvironment
-    envforge_version: str = "1.0.0"
-    generated_at: datetime = field(default_factory=datetime.utcnow)
+    envforage_version: str = "2.0.0"
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     warnings: list[str] = field(default_factory=list)
     extra: dict[str, Any] = field(default_factory=dict)
     use_uv: bool = False
@@ -51,7 +51,7 @@ class TemplateContext:
             ],
             "warnings": self.warnings,
             "generated_at": self.generated_at.strftime("%Y-%m-%d %H:%M UTC"),
-            "envforge_version": self.envforge_version,
+            "envforage_version": self.envforage_version,
             "use_uv": self.use_uv,
             "use_micromamba": self.use_micromamba,
             **self.extra,

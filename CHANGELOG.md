@@ -1,11 +1,60 @@
 # Changelog
-
+ 
 All notable changes to this project will be documented in this file.
-
+ 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-06-21
+
+### Added
+- **Windows Installer**: Added a dedicated Windows installer (`envforage-setup.exe`), an upgrade flow, and existing-install detection & repair UI.
+- **Uninstall Feedback Flow**: Built a full end-to-end feedback feature for when users uninstall (API, Database, and frontend UI).
+- **SQLite Cache**: Replaced the legacy in-memory/file fallback cache layer with a robust, persistent SQLite cache mechanism.
+
+### Changed
+- **UI & UX Improvements**: Replaced the `/install` route with `/download` and switched the app to default to Dark Mode. Migrated all documentation to interactive React pages instead of static files.
+- **Mock Replacements**: Replaced massive mock components (e.g., webhook logs) with clean, functional code.
+
+### Fixed
+- **Zero-Lint Codebase**: Cleared over 70 ESLint errors and warnings. The frontend is now strictly typed, completely lint-compliant, and free of dangerous `any` types and `@ts-ignore` statements.
+- **Security & Stability**: Added Gitleaks to the CI pipeline to catch secrets, relaxed overly strict prod safety checks, implemented an in-memory Redis fallback, and fixed severe hydration issues.
+
+
+## [2.0.0] - 2026-06-18
+
+### Added
+- **Database-Backed Compatibility Matrix**: Replaced static YAML compatibility files with a dynamic database schema, robust CLI matrix syncing, and a matrix synchronization service.
+- **AST-Based Script Safety Gates**: Implemented abstract syntax tree (AST) based shell script safety validation and integrated ShellCheck static analysis to automatically scan and block dangerous/destructive commands.
+- **Environment Validation Module**: Added validation checks in both the CLI and backend to verify system prerequisites and tool chains.
+- **Recommendation Engine**: Implemented an automated ML framework and driver recommendation module to suggest optimal profiles based on diagnostic reports.
+- **Sentry Error Tracking**: Integrated Sentry error reporting, error boundaries, and environment-gated logging into the Next.js frontend.
+- **SEO Enhancements**: Added canonical url route tags, automated sitemap.xml, and robots.txt generation.
+- **Get Started Installation Wizard**: Designed and implemented an interactive onboarding and installation page in the frontend web application.
+- **Favorites Support**: Added support for marking ML environment profiles as favorites for quick retrieval.
+- **Diagnostics Formatting**: Added a new `--format markdown` flag output option to `envforge diagnose` for formatted CLI report output.
+- **Automatic Retries**: Implemented client-side API call retries with exponential backoff for GET requests.
+- **Security Validation and Hardening**: Added database-backed admin API key validation, password strength validation, rate limiting to authentication endpoints, and an environment startup guard for `SECRET_KEY`.
+
+### Fixed
+- **Cache Mismatch Engine Crashes**: Resolved several cache-type crashes in `update_profile()` and `generate_scripts()`.
+- **Worker Async Persistence**: Made S3 integration, audit logging, and celery status queries fully async and robust against failure.
+- **Safety Filters**: Hardened AST-based shell script safety filters against provider errors and unbounded stream buffer leaks.
+- **DoS Mitigation in Schemas**: Capped maximum list lengths of GPUs and python installations in `DiagnosticReportSchema` to prevent oversized JSON denial-of-service vectors.
+ 
+
+## [1.0.2] - 2026-06-02
+
+### Added
+- **Vercel Speed Insights**: Added Vercel speed insights to the frontend.
+- **WSL2 Diagnostics**: Add WSL2 GPU passthrough diagnostics and warning before provisioning.
+- **Dynamic Versioning**: Use dynamic version string from `__init__.py` for the CLI agent to prevent PyPI publish errors.
+
+### Fixed
+- **Backend Error**: Resolved backend production errors.
+- **Profiles Metadata**: Fixed null metadata handling in profiles.
+
+## [1.0.1] - 2026-05-30
 
 ### Added
 - **Frontend Containerization & Orchestration:**
@@ -17,12 +66,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `use_uv` boolean field to `GenerationRequest` schema — when `true`, generated scripts bootstrap and use `uv` instead of `pip` for significantly faster package installation.
   - Updated `setup_windows.ps1.j2` to bootstrap `uv` via `Invoke-RestMethod` and conditionally use `uv pip install`.
   - Updated `setup_linux.sh.j2` to bootstrap `uv` via `curl` and conditionally use `uv pip install` across all install paths (CUDA, non-CUDA, CPU-only).
-
+### Added
+- **Helm Chart for Kubernetes Deployment:**
+  - Added `helm/envforage/` chart with templates for backend Deployment, Redis Deployment, Services, Ingress, and ConfigMap.
+  - Parameterized via `values.yaml` — image, ports, replicas, env vars, and Redis config are all overridable.
+  - Non-root `securityContext` (`runAsNonRoot: true`) applied to backend Deployment, consistent with Dockerfile hardening.
+  - Liveness and readiness probes configured on `/health`.
+### Fixed
+- **Unbounded String Fields in Diagnostic Schema (`schemas/diagnostic.py`):**
+  - String fields in the diagnostic report schema accepted values with no upper length bound. Because these reports are persisted to PostgreSQL (including denormalized `VARCHAR` columns) and processed through Pydantic validation/serialization, oversized values from a malicious client or buggy agent could fail at persist time, cause memory pressure, or pollute logs.
+  - Added `max_length` constraints to the affected fields: `OSInfo.name` (128), `OSInfo.version` (32), `OSInfo.architecture` (32), `CPUInfo.brand` (256), `GPUInfo.name` (256), `GPUInfo.driver_version` (32), `PythonInfo.version` (20), and `PythonInfo.path` (512). Oversized values are now rejected with a `422` at the API boundary instead of reaching the database.
+  - Added 18 unit tests in `test_diagnostic_schema.py` covering boundary-length acceptance, over-length rejection (`string_too_long`), preservation of the optional `driver_version` default, and acceptance of representative real-world values. (#439)
+- **Rate Limiter Redis Fallback (`rate_limit.py`):**
+  - Redis `ConnectionError` or `TimeoutError` during `RedisBackend.is_allowed()` previously bubbled up as an unhandled exception, causing a **500 Internal Server Error** on every rate-limited endpoint while Redis was unreachable.
+  - `RateLimiter.__call__` now catches these errors, logs a `WARNING`, and transparently falls back to a shared `_fallback_backend` (`InMemoryBackend`) singleton so requests continue to be served.
+  - `redis.exceptions` is imported lazily to keep the module functional in InMemoryBackend-only deployments where the `redis` package is not installed.
+  - Non-Redis exceptions are re-raised so unrelated bugs are not silently swallowed.
+  - Added 4 unit tests in `test_rate_limit.py` covering `ConnectionError` fallback, `TimeoutError` fallback, non-Redis re-raise, and verifying the request is allowed (not 429) after fallback.
 ## [1.0.0] - 2026-05-22
-
+ 
 ### Added
 - **v1.0.0 Stable Release.**
-  - Official launch of the stable `v1.0.0` release of the EnvForge platform, consolidating all CLI, backend, frontend, and AI troubleshooting features.
+  - Official launch of the stable `v1.0.0` release of the EnvForage platform, consolidating all CLI, backend, frontend, and AI troubleshooting features.
   - End-to-end integration of AI-assisted environment troubleshooting, system diagnostic reporting, and custom shell setup script generation.
 - **Conda Environment Configuration:**
   - Added support for generating and exporting `environment.yml` files for Anaconda/Miniconda envs.
@@ -30,7 +95,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Integrated GitHub CodeQL static analysis workflows to automatically scan Python (backend/CLI) and JavaScript/TypeScript (frontend) code for vulnerabilities.
   - Configured Dependabot for automated weekly updates to node modules, Python pip dependencies, and GitHub Actions.
   - Added pre-commit security hooks to check for private keys, large files, and merge conflicts locally.
-
 ### Fixed
 - **Frontend Build & Compilation Stability:**
   - Resolved all compilation, type, and linting errors across the Next.js frontend application.
@@ -41,9 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaced native `<a>` elements with Next.js client-side `<Link>` tags across the layout.
 - **CLI Output Flag Testing:**
   - Integrated unit tests for the CLI `diagnose --output` parameter to ensure correct file generation formatting.
-
 ## [0.5.0] - 2026-05-16
-
+ 
 ### Added
 - **Phase 6 — Production Infrastructure.**
   - `docker-compose.prod.yml`: production Compose with PostgreSQL, Redis, and
@@ -56,24 +119,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `redis_url` config field in `config.py`: optional (`None` by default),
     no changes required to existing dev/test environments.
   - `.env.prod` template for production secrets.
-
 ### Fixed
 - `FRAMEWORK_CUDA_SUPPORT["tensorflow"]["2.15.0"]` corrected from `"12.1"` to
   `"12.2"` — TF 2.15 ships with CUDA 12.2, not 12.1.
 - `PYTHON_MATRIX["tensorflow"]["2.15.0"]["supported_cuda"]` corrected to match.
-
 ### Added (Compatibility Matrix)
 - CUDA 12.2 and 12.3 entries added to `CUDA_MATRIX` and `cuda_matrix.yaml`.
 - TF 2.16.0, 2.16.1, 2.17.0, 2.18.0 added to `FRAMEWORK_CUDA_SUPPORT` and
   `PYTHON_MATRIX` with CUDA 12.3 and Python 3.9–3.12 support.
   Resolves TODO left in Phase 1.
-
 ## [0.4.0] - 2026-05-14
-
+ 
 ### Added
 - **Phase 4 — Part 1**: OpenRouter LLM Provider.
   - `OpenRouterProvider` class implementing `LLMProvider` ABC with async HTTP, JSON mode enforcement, exponential backoff retry (3 attempts), Pydantic response parsing, and token usage tracking.
-  - Provider factory `get_provider()` — reads `ENVFORGE_LLM_PROVIDER` env var and instantiates the correct provider with lazy imports.
+  - Provider factory `get_provider()` — reads `ENVFORAGE_LLM_PROVIDER` env var and instantiates the correct provider with lazy imports.
   - New config fields: `ai_max_tokens` (default 2048), `ai_temperature` (default 0.3).
   - ADR-009: OpenRouter as Primary LLM Gateway.
 - **Phase 4 — Part 2**: Prompt Engineering System.
@@ -115,9 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive unit test suite for AI components (`test_models.py`, `test_prompts.py`, `test_rate_limit.py`, `test_repair_service.py`, `test_system_prompts.py`).
   - Integration tests for the full repair pipeline (`test_ai_pipeline.py`) validating prompt generation, template rendering, and safety filter execution.
   - 100% pass rate on 66 test cases.
-
 ## [0.3.0] - 2026-05-14
-
+ 
 ### Added
 - **Phase 3 Complete:** Next.js Frontend Web Application.
 - Interactive Profile Browser displaying environment templates, capabilities, and pre-configured packages.
@@ -128,7 +187,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation updates for Phase 3 (Architecture, Workflows, Script Wizard Feature Doc, Diagnostic Dashboard Feature Doc).
 - ADR-007: Dynamic UI Form Validation for Compatibility Engine.
 - ADR-008: Safety Filter Negative Lookahead for Docker Cleanup Commands.
-
 ### Fixed
 - Re-aligned frontend `PackageDef` interface with backend `PackageSpecSchema` to ensure accurate package rendering.
 - Re-aligned frontend `ScriptGenerationResponse` interface — replaced stale `files_generated: string[]` with correct `scripts: ScriptPreview[]` structure to prevent `Cannot read properties of undefined` crash on results page.
@@ -139,22 +197,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed doubled download URL (`/api/v1/api/v1/...`) by stripping the `/api/v1` prefix from the base URL before appending the backend's `download_url`.
 - Added null-safety guards for `profile.description` and `profile.tags` on the profiles listing page to prevent crashes when these optional fields are null.
 - Removed trailing slashes in Vercel `NEXT_PUBLIC_API_URL` to fix `Failed to fetch` errors in production.
-
 ## [0.2.0] - 2026-05-06
-
+ 
 ### Added
-- **Phase 2 Complete:** CLI Diagnostic Agent (`envforge-agent`).
+- **Phase 2 Complete:** CLI Diagnostic Agent (`envforage`).
 - OS detection for Windows, Linux, and WSL2.
 - GPU detection via `nvidia-smi`.
 - CUDA toolkit, cuDNN, and NCCL version detection.
 - Python installation scanner.
 - RAM and CPU profiling.
-- CLI commands: `envforge diagnose`, `envforge verify`, and `envforge fix`.
+- CLI commands: `envforage diagnose`, `envforage verify`, and `envforage fix`.
 - Test suite with multi-platform fixtures.
 - Documentation updates for CLI Agent deep-dive.
-
 ## [0.1.0] - 2026-05-06
-
+ 
 ### Added
 - **Phase 1 Complete:** Core Backend implementation.
 - FastAPI server with async PostgreSQL database (SQLAlchemy 2.0).

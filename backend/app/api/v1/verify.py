@@ -1,8 +1,7 @@
 """Verify endpoint — POST /api/v1/verify."""
-
 import re
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -113,7 +112,7 @@ async def verify_environment(
         report_id=payload.report_id,
         profile_id=payload.profile_id,
         overall_status=overall_status,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
     )
     db.add(db_result)
 
@@ -130,6 +129,7 @@ async def verify_environment(
 
     # Flush to ensure IDs are generated and constraints are checked
     await db.flush()
+    await db.commit()
 
     return VerificationResponse(
         result_id=db_result.id,
